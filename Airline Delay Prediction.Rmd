@@ -1,0 +1,177 @@
+---
+title: "Prediction and Analysis of Airline Delays"
+date: "April 22, 2016"
+output: html_document
+---
+ 
+# Background
+
+What analysis will we perform?
+
+1.	Linear Regression - By how much is the flight going to be delayed (if at all)? The dependent variable will be delay in minutes. 
+2.	Logistic Regression - Is the flight going to be delayed (Yes/No)? Using the flight delay information can we predict the threat level as defined by the US Government? 
+We will use GLM, KNN and other algorithms we learnt in class.
+
+Some of the questions of interest we hope to answer
+
+1.	Which airport within the same metro area has the least delay?
+2.	Which airline takes the least time to reach its destination on a particular route (e.g. LAX-NYC)?
+3.	By how much did 9/11 have effect on flight and/or airport security delays?
+4.	How much does weather play a role in delays? Furthermore, how often are flights cancelled due to inclement weather conditions?
+5.	Does the age of an aircraft have an impact on delays?
+
+What is our approach?
+
+1.	The main data set we will use is from Bureau of Transportation Statistics (BTS). It contains data about delays for all airports and all flights. The data set includes delays in minutes for carrier delay, weather delay, NAS delay, security delay, late aircraft delay, taxi-in and taxi-out times). Please see below for detailed code book for the data set.
+2.	We plan to restrict our analysis to popular metro hubs (NYC, LA, DC, DALLAS, ATL, CHICAGO, BOSTON, SF, PHL) and the airports in those areas by filtering data from the data we collect from BTS.  This approach will help us reduce the size of the data set and at the same time be able to compare airports in the same metro area.
+3.	We will use data for years before and after 9/11 so that we can compare the impact of 9/11 on flight delays.
+4.	We will introduce a categorical variable indicating threat level (Severe, High, Elevated, Guarded, Low) in our analysis.
+5.	We will use lookup tables to retrieve airports in the same metro area using data wrangling.
+6.	We plan to include weather information in our analysis. We will download data from NOAA.  The data set provides hourly details about precipitation, snow, and temperature at various locations. This data will be used to analyze and predict delays/cancellations in flights due to various weather conditions.
+7.	We will perform data wrangling to extract weather data for the set of metro areas we are interested in.
+8.	We will add a categorical variable for weather which we will derive from the data we download. The categorical variable will have the following values: poor, fair, good, and excellent.
+9.	We perform data wrangling to extract weather on a daily basis.
+10.	We will consider the weather to be the same for all airports in the same metro area.
+11.	We will add information about aircraft. (TailNum, Type, Manufacturer, Issue Date, Model, Status, Aircraft Type, Engine Type, Year)
+12.	We will join the aircraft data with the data set about flight information and weather.
+13.	We analyze if age of an aircraft has an impact on delays.
+14.	We will perform data wrangling to handle airline mergers.
+
+What explanatory variables we will use? (Please see below for detailed list): 
+
+Flight Information
+    Time Period 
+        Date
+        Day of the week
+        Flight Date
+    Airline
+        Carrier
+        Airline ID
+        TailNum
+        FlightNum
+    Origin
+        Airport ID
+        CityMarketID for Metropolitan area the airport serves
+        City
+        State
+    Destination
+        Airport ID
+        CityMarketID for Metropolitan area the airport serves
+        City
+        State
+    Departure Performance
+        DepDelay in mins
+        DepDelay15 Indicator - indicates delay by 15 mins or more
+        Taxiout time in mins
+    Arrival Performance
+        TaxiIn time in mins
+        ArrDelay in mins
+        ArrDel15 Indicator - - indicates delay by 15 mins or more
+    Cancellation and Diversions
+    Cause of Delay
+        CarrierDelay in mins
+        WeatherDelay in mins
+        NASDelay in mins (delay due to air traffic)
+        SecurityDelay in mins (delay due to security)
+        LateAircraftDelay in mins (delay due to aircraft arriving late)
+
+Aircraft Data
+
+    TailNum
+    Type
+    Manufacturer
+    Issue Date
+    Model
+    Status
+    Aircraft Type
+    Engine Type
+    Year
+
+Weather Information
+
+   Station
+   Station_Name
+   Date
+   Prcp (Precipitation in mm)
+   Snow (Snow fall in mm)
+   Snwd (Snow depth in mm)
+   Tmax (Maximum Temperature)
+   Tmin (Min Temperature)
+   Awnd (Average daily wind speed)
+
+What are some of the other studies we will refer to?
+
+http://fivethirtyeight.com/features/how-we-found-the-fastest-flights/
+http://cs229.stanford.edu/proj2012/CastilloLawson-PredictingFlightDelays.pdf
+http://www.mit.edu/~hamsa/pubs/RebolloBalakrishnanTRC2014.pdf
+
+
+
+
+
+```{r}
+# load dplyr library
+library(dplyr)
+
+# date data was downloaded
+dateDownloaded<- date()
+
+# metro area airports for the analysis 
+airports <- c("JFK", "LGA", "EWR", "TTN", "HPN", "PHL", "LAX", "DCA", "IAD", "BWI", "DFW", "ATL", "ORD", "MDW", "BOS", "SFO", "OAK")
+
+
+######################################################################################
+# One time processing of input files
+# april 2015
+infile.april2015 <- "C:/Users/parul/Documents/CSCI E-107/Project/Data/April 2015.csv"
+
+april2015 <- tbl_df(read.csv(infile.april2015,stringsAsFactors = F))
+
+df <- april2015 %>% filter(ORIGIN %in% airports | DEST %in% airports)
+
+outfile.april2015 <- "C:/Users/parul/Documents/CSCI E-107/R Working Directory/Project/OutData/April 2015.csv.gz"
+
+z <- gzfile(outfile.april2015)
+write.csv(df, z)
+########################################################################################
+
+
+
+df1 <- df%>% select(DAY_OF_WEEK, ORIGIN, DEP_TIME, DEP_DELAY, DEP_DELAY_NEW, DEP_DEL15, DEST, ARR_TIME, ARR_DELAY, ARR_DELAY_NEW, ARR_DEL15, CANCELLED, CANCELLATION_CODE, DIVERTED) %>% filter (ORIGIN=="JFK") %>% mutate(DP1=round(as.numeric(DEP_TIME)/100)) 
+
+df2 <- df1 %>% group_by(DP1) %>% summarise(count=sum(DEP_DEL15))
+
+# Graphs - 
+# When to fly?
+# 1. histogram where x axis is hour of the day and y axis is the number delays for any one airport
+# how much are the displays during various hours - magnitude of the delay
+# 2. histogram 
+# Day of the week 
+# 3. histogram - x axis
+# Season of the year
+# 4. histogram
+# 5.Airline - delay specific to each airline
+# 6. Airport - small v/s large 
+# 7. Weather delays
+
+
+#load ggplot library
+#install.packages("ggplot2")
+library(ggplot2)
+
+#qplot(DP1, data=df1, geom="histogram")
+
+# remove any data that is NA or blank
+g1 <- df2 %>% ggplot(aes(x=DP1,y=count)) + geom_histogram()
+
+#display plot
+g1
+
+
+
+
+
+
+```
+
+
