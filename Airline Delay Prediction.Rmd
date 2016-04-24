@@ -122,17 +122,32 @@ airports <- c("JFK", "LGA", "EWR", "TTN", "HPN", "PHL", "LAX", "DCA", "IAD", "BW
 
 ######################################################################################
 # One time processing of input files
-# april 2015
-infile.april2015 <- "C:/Users/parul/Documents/CSCI E-107/Project/Data/April 2015.csv"
+# Each input file has data for the month for all airports in US
+# Filter data for only the airpoerts we are interested.
+#
+# List the months
+months <- c("April 2015", "May 2015", "June 2015", "July 2015", "Aug 2015", "Sep 2015", "Oct 2015", "Nov 2015", "Dec 2015", "Jan 2016", "Feb 2016", "Mar 2016")
 
-april2015 <- tbl_df(read.csv(infile.april2015,stringsAsFactors = F))
+# function to process each file and write a gz file with data only for the airports of 
+# interest
+process.file <- function (month) {
+  
+  #form path to input file
+  infile <- paste("C:/Users/parul/Documents/CSCI E-107/Project/Data/", month, ".csv", sep="")
+  
+  #read the file
+  df <- tbl_df(read.csv(infile,stringsAsFactors = F))
+  #filter airports
+  df1 <- april2015 %>% filter(ORIGIN %in% airports | DEST %in% airports)
+  #form path to output file
+  outfile <- paste("C:/Users/parul/Documents/CSCI E-107/R Working Directory/Final Project/cs107-Final_Project/OutData/", month, ".csv.gz", sep="")
+  # write to gz file
+  z <- gzfile(outfile)
+  write.csv(df, z)
+}
 
-df <- april2015 %>% filter(ORIGIN %in% airports | DEST %in% airports)
-
-outfile.april2015 <- "C:/Users/parul/Documents/CSCI E-107/R Working Directory/Project/OutData/April 2015.csv.gz"
-
-z <- gzfile(outfile.april2015)
-write.csv(df, z)
+# Apply process.file function for each month
+sapply(months, process.file)
 ########################################################################################
 
 
