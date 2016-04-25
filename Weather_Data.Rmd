@@ -1,0 +1,33 @@
+```{r}
+library(dplyr)
+library(readr)
+library(lubridate)
+
+# Reading the weather data 
+Weather<-read_csv("https://github.com/yashspatel23/cs107-Final_Project/blob/master/Weather%20Data/Weather_Data.csv")
+Weather<-read_csv("C:/My Folder/Technology/Data Science/Introduction to Data Science/Project/Data/Weather_Data.csv")
+#Reading location information with Airport Code
+Airport <- read_csv("https://github.com/yashspatel23/cs107-Final_Project/blob/master/Weather%20Data/CITY_LOOKUP.csv")
+Airport <- read_csv("C:/My Folder/Technology/Data Science/Introduction to Data Science/Project/Data/CITY_LOOKUP.csv")
+
+#Removing duplicate column names from the data set
+Weather<- Weather[, !duplicated(colnames(Weather))]
+
+#Wrangling the date to match the format we have in Flight dataset
+Weather <- Weather %>% mutate(DATE=ymd(DATE,tz=""))
+
+#Removing the prefix part of Staion to perform join for Airport Code
+Weather<- Weather %>% mutate(STATION=gsub("([GHCND:])", "", Weather$STATION))
+
+#Removing the Station name from the Airport dataset
+Airport<-Airport%>% select(-STATION_NAME)
+
+#Doing a join to get the airport code into the weather dataset
+Weather<- left_join(Weather,Airport,by="STATION")
+
+#Mutating new columns to Categorize weather 
+Weather<-Weather %>% mutate(ST_HFOG=ifelse(WT02>0,"Heavy Fog","")) %>% mutate(ST_FOG=ifelse(WT01>0,"Fog","")) %>% mutate(ST_GLAZE=ifelse(WT06>0,"Glaze","")) %>% mutate(ST_THUNDER=ifelse(WT03>0,"Thunder","")) %>% mutate(ST_Rain=ifelse(PRCP>5,"Heavy Rain",ifelse(PRCP>0,"Light Rain",""))) %>% mutate(ST_Snow=ifelse(SNOW>40,"Heavy Snow",ifelse(SNOW>0,"Light Snow",""))) %>% mutate(ST_Wind=ifelse(AWND>30,"Heavy Wind",ifelse(AWND>0,"Light Wind",""))) %>% 
+mutate(Category=ifelse((ST_FOG == "" & ST_GLAZE == "" & ST_THUNDER == "" & ST_Rain == "" & ST_Snow =="" & ST_Wind != "Heavy Wind"), "Clear", paste(ST_FOG,ST_GLAZE,ST_THUNDER,ST_Rain,ST_Snow,ST_Wind)))
+
+```
+
